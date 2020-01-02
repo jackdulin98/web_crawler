@@ -1,16 +1,22 @@
 import requests
 import re
 from urllib.parse import urlparse
+import os
 
 class PyCrawler(object):
     def __init__(self, starting_url):
         self.starting_url = starting_url
         self.visited = set()
+        self.proxy_orbit_key = os.getenv("PROXY_ORBIT_TOKEN")
+        self.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+        self.proxy_orbit_url = f"https://api.proxyorbit.com/v1/?token={self.proxy_orbit_key}&ssl=true&rtt=0.3&protocols=http&lastChecked=30"
 
-    # get html at the current link
+        # get html at the current link
     def get_html(self, url):
         try:
-            html = requests.get(url)
+            proxy_info = requests.get(self.proxy_orbit_url).json()
+            proxy = proxy_info['curl']
+            html = requests.get(url, headers={"User-Agent":self.user_agent}, proxies={"http":proxy, "https":proxy}, timeout=5)
         except Exception as e:
             print(e)
             return ""
@@ -45,11 +51,17 @@ class PyCrawler(object):
             print(link)
             self.visited.add(link)
             info = self.extract_info(link)
+
+            print(f"""Link: {link}    
+            Description: {info.get('description')}    
+            Keywords: {info.get('keywords')}    
+                        """)
+
             self.crawl(link)
 
     def start(self):
         self.crawl(self.starting_url)
 
 if __name__ == "__main__":
-    crawler = PyCrawler("http://lillysingh.blogspot.com")
+    crawler = PyCrawler("https://google.com")
     crawler.start()
